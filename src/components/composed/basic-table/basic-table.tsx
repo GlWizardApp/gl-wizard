@@ -18,6 +18,7 @@ import saveAs from "file-saver";
 interface Props {
   header: TableHeader[];
   data: Record<string, string>[];
+  reversalReclassification?: boolean;
 }
 
 export interface TableHeader {
@@ -26,7 +27,7 @@ export interface TableHeader {
 }
 
 export const BasicTable = (props: Props) => {
-  const { header, data } = props;
+  const { header, data, reversalReclassification } = props;
 
   const tableRef = useRef(null);
 
@@ -80,7 +81,7 @@ export const BasicTable = (props: Props) => {
     saveAs(blob, "table_data.xlsx");
   };
 
-  console.log(data.map((item) => item.reversal));
+  console.log(data.map((item) => item.result));
   const getCellValueFormatted = (
     key: string,
     value: string | Date | number | string[]
@@ -89,7 +90,9 @@ export const BasicTable = (props: Props) => {
       case "date":
         return formatDate(value as Date, "dd-MM-yyy");
       case "result":
-        return (value as string[]).join("/");
+        return reversalReclassification
+          ? String(value || "-")
+          : (value as string[]).join("/");
       default:
         return String(value);
     }

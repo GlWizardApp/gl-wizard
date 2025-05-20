@@ -2,7 +2,6 @@
 import { useMemo, useState } from "react";
 import { Workbook } from "exceljs";
 import { formatDate } from "date-fns";
-import { GridColDef } from "@mui/x-data-grid";
 import { saveAs } from "file-saver";
 import {
   AnalysisStep,
@@ -10,6 +9,7 @@ import {
   ReviewData,
   GlHeaders,
 } from "../general-analysis/general-analysis-model";
+import { TableHeader } from "../../composed/basic-table/basic-table";
 
 export interface SelectedHeaders {
   glHeaders: GlHeaders;
@@ -18,6 +18,8 @@ export interface SelectedHeaders {
 
 export interface CoaHeaders {
   mappingValue: string;
+  displayValue: string;
+  groupingValue: string;
 }
 
 export interface CoaFilters {
@@ -35,6 +37,10 @@ export function useReversalReclassificationAnalysis() {
     coaHeaders: [],
   });
 
+  const [loadingStatus, setLoadingStatus] = useState(false);
+
+  const [error, setError] = useState<string | undefined>(undefined);
+
   const [tableData, setTableData] = useState<Record<string, any>[]>([]);
 
   const [selectedFilters, setSelectedFilters] = useState<CoaFilters>({
@@ -50,32 +56,45 @@ export function useReversalReclassificationAnalysis() {
     },
     coaHeaders: {
       mappingValue: "",
+      displayValue: "",
+      groupingValue: "",
     },
   });
 
   const reviewData: ReviewData = useMemo(() => {
-    const dateValues = rawData.glData
-      .map((item) => new Date(item[selectedHeaders.glHeaders.date]).getTime())
-      .filter((time) => !isNaN(time));
     return {
       rows: rawData.glData.length,
       total: selectedHeaders.glHeaders.value
         ? rawData.glData.reduce(
             (prev, curr) =>
-              (prev += isNaN(curr[selectedHeaders.glHeaders.value])
-                ? 0
-                : curr[selectedHeaders.glHeaders.value]),
+              (prev += Number(curr[selectedHeaders.glHeaders.value])),
             0
           )
         : 0,
-      startDate:
-        selectedHeaders.glHeaders.date && dateValues.length > 0
-          ? formatDate(new Date(Math.min(...dateValues)), "dd-MM-yyyy")
-          : "-",
-      endDate:
-        selectedHeaders.glHeaders.date && dateValues.length > 0
-          ? formatDate(new Date(Math.max(...dateValues)), "dd-MM-yyyy")
-          : "-",
+      startDate: selectedHeaders.glHeaders.date
+        ? formatDate(
+            new Date(
+              Math.min(
+                ...rawData.glData.map((item) =>
+                  new Date(item[selectedHeaders.glHeaders.date]).getTime()
+                )
+              )
+            ),
+            "dd-MM-yyyy"
+          )
+        : "",
+      endDate: selectedHeaders.glHeaders.date
+        ? formatDate(
+            new Date(
+              Math.max(
+                ...rawData.glData.map((item) =>
+                  new Date(item[selectedHeaders.glHeaders.date]).getTime()
+                )
+              )
+            ),
+            "dd-MM-yyyy"
+          )
+        : "",
     };
   }, [rawData, selectedHeaders]);
 
@@ -112,37 +131,19 @@ export function useReversalReclassificationAnalysis() {
     [rawData.coaData, selectedFilters]
   );
 
-  const tableHeader: GridColDef[] = useMemo(
+  const tableHeader: TableHeader[] = useMemo(
     () => [
       ...Object.keys(selectedHeaders.glHeaders).map((item) => ({
-        field: selectedHeaders.glHeaders[item as keyof GlHeaders],
-        headerName: selectedHeaders.glHeaders[item as keyof GlHeaders],
-        valueGetter: (value: string | Date | string[]) =>
-          item === "date" ? formatDate(value as Date, "dd-MM-yyyy") : value,
-        sortable: false,
-        filterable: false,
-        resizable: false,
-        disableColumnMenu: true,
-        flex: 1,
+        key: item,
+        title: selectedHeaders.glHeaders[item as keyof GlHeaders],
       })),
       {
-        field: selectedFilters.header,
-        headerName: selectedFilters.header,
-        valueGetter: (_: any, row: any) => row.coaData[selectedFilters.header],
-        sortable: false,
-        filterable: false,
-        resizable: false,
-        disableColumnMenu: true,
-        flex: 1,
+        key: selectedFilters.header,
+        title: selectedFilters.header,
       },
       {
-        field: "result",
-        headerName: "Rezultat",
-        sortable: false,
-        filterable: false,
-        resizable: false,
-        disableColumnMenu: true,
-        flex: 1,
+        key: "result",
+        title: "Rezultat",
       },
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -152,6 +153,19 @@ export function useReversalReclassificationAnalysis() {
   const onGeneralLedgerDrop = async (acceptedFiles: File[]) => {
     const file = acceptedFiles[0];
     if (!file) return;
+
+    const validMimeTypes = [
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "application/vnd.ms-excel",
+    ];
+    if (!validMimeTypes.includes(file.type) && !file.name.endsWith(".xlsx")) {
+      setError("Invalid file type. Please upload an Excel file.");
+
+      setTimeout(() => {
+        setError(undefined);
+      }, 4000);
+      return;
+    }
 
     const buffer = await file.arrayBuffer();
     const workbook = new Workbook();
@@ -225,6 +239,8 @@ export function useReversalReclassificationAnalysis() {
       ...prev,
       coaHeaders: {
         mappingValue: columnNames.filter(Boolean)[0],
+        displayValue: "",
+        groupingValue: "",
         filters: {
           header: "",
           value: "",
@@ -271,6 +287,8 @@ export function useReversalReclassificationAnalysis() {
     setSelectedHeaders({
       coaHeaders: {
         mappingValue: "",
+        displayValue: "",
+        groupingValue: "",
       },
       glHeaders: {
         account: "",
@@ -286,83 +304,37 @@ export function useReversalReclassificationAnalysis() {
   };
 
   const onPressAnalyzeData = () => {
-    const output = rawData.glData.map((item) => {
-      const foundCoaItems = rawData.coaData.filter((coaItem) =>
-        item[selectedHeaders.glHeaders.account].includes(
-          coaItem[selectedHeaders.coaHeaders.mappingValue]
-        )
-      );
-      const betterMatchingCoaItem = foundCoaItems.sort(
-        (a, b) => b.length - a.length
-      )[0];
-
-      return {
-        ...item,
-        coaData: betterMatchingCoaItem,
-      };
-    });
-
-    const filtered = output.filter((item) =>
-      selectedFilters.header && selectedFilters.value
-        ? item.coaData[selectedFilters.header] === selectedFilters.value
-        : true
-    );
-
-    const groupedByAccountAndDate: Record<string, any[]> = filtered.reduce(
-      (acc, curr) => {
-        const key = `${
-          curr[
-            selectedHeaders.glHeaders.date as Exclude<
-              keyof typeof curr,
-              "coaData"
-            >
-          ]
-        }_${
-          curr[
-            selectedHeaders.glHeaders.account as Exclude<
-              keyof typeof curr,
-              "coaData"
-            >
-          ]
-        }`;
-        if (!acc[key]) acc[key] = [];
-        acc[key].push(curr);
-        return acc;
-      },
-      {} as Record<string, any[]>
-    );
-
-    for (const [, rows] of Object.entries(groupedByAccountAndDate)) {
-      let i = 0;
-      while (i < rows.length) {
-        const chunk = [];
-        let sum = 0;
-
-        for (let j = i; j < rows.length; j++) {
-          chunk.push(rows[j]);
-          sum =
-            Number(sum.toFixed(2)) +
-            Number(rows[j][selectedHeaders.glHeaders.value].toFixed(2));
-          // Check if the sum of the chunk is zero
-          if (sum === 0) {
-            // Assign the result property to each row in the chunk
-            chunk.forEach((row) => (row.result = "reversal/reclassification"));
-
-            // Move to the next unprocessed rows
-            i = j + 1;
-            break;
-          }
-        }
-
-        // If the loop ends without finding a zero sum, increase the chunk size
-        if (sum !== 0) {
-          i++; // Increase starting point to prevent infinite loop
-        }
+    setLoadingStatus(true);
+    const worker = new Worker(
+      new URL(
+        "../../../workers/reversal-reclassification-worker.js",
+        import.meta.url
+      ),
+      {
+        type: "module",
       }
-    }
+    );
 
-    setTableData(Object.values(groupedByAccountAndDate).flat());
-    setCurrentStep((prev) => [...prev, AnalysisStep.ANALYZED]);
+    worker.onmessage = (event) => {
+      setTableData(
+        Object.values(event.data.groupedByAccountAndDate).flat() as Record<
+          string,
+          any
+        >[]
+      );
+
+      setCurrentStep((prev) => [...prev, AnalysisStep.ANALYZED]);
+      setLoadingStatus(false);
+      worker.terminate();
+    };
+
+    worker.onerror = (error) => {
+      console.error("Worker error:", error);
+      setLoadingStatus(false);
+      worker.terminate();
+    };
+
+    worker.postMessage({ rawData, selectedHeaders, selectedFilters });
   };
 
   const onPressDownloadData = async () => {
@@ -445,6 +417,8 @@ export function useReversalReclassificationAnalysis() {
     onPressDownloadData,
     onPressResetBtn,
     onChangeCoaFilter,
+    error,
+    loadingStatus,
     coaFilterOptions,
     selectedFilters,
     currentStep,

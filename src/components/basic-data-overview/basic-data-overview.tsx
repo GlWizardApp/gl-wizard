@@ -14,9 +14,11 @@ interface Props {
   disabled: boolean;
   tableHeader: TableHeader[];
   tableData: Record<string, string>[];
+  reversalReclassification?: boolean;
 }
 export const BasicDataOverview = (props: Props) => {
-  const { title, disabled, tableHeader, tableData } = props;
+  const { title, disabled, tableHeader, tableData, reversalReclassification } =
+    props;
   return (
     <Accordion
       style={{
@@ -29,7 +31,11 @@ export const BasicDataOverview = (props: Props) => {
       </AccordionSummary>
       <AccordionDetails>
         <Stack>
-          <BasicTable header={tableHeader} data={tableData} />
+          <BasicTable
+            reversalReclassification={reversalReclassification}
+            header={tableHeader}
+            data={tableData}
+          />
         </Stack>
       </AccordionDetails>
     </Accordion>
