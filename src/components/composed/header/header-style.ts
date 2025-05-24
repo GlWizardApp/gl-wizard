@@ -4,11 +4,13 @@ export const styles: Record<string, CommonProps["style"]> = {
   headerWrapper: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
+    justifyContent: "space-evenly",
   },
   headerBtnsWrapper: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "flex-end",
+    flex: 1,
   },
   card: {
     backgroundColor: "white",
@@ -17,5 +19,10 @@ export const styles: Record<string, CommonProps["style"]> = {
   },
   title: {
     fontWeight: "bold",
+  },
+  name: {
+    fontWeight: "bold",
+    paddingRight: "1rem",
+    color: "gray",
   },
 };

@@ -5,6 +5,7 @@ export const styles: Record<string, CommonProps["style"]> = {
     width: "calc(100vw - 6rem)",
     minHeight: "calc(100vh - 4rem)",
     justifyContent: "flex-start",
+    gap: "1rem",
   },
   button: {
     width: "100%",
@@ -14,5 +15,18 @@ export const styles: Record<string, CommonProps["style"]> = {
     fontSize: 20,
     fontWeight: "bold",
     color: "white",
+  },
+  image: {
+    width: 150,
+    height: "auto",
+  },
+  label: {
+    color: "#3d9970",
+    fontWeight: "bold",
+    fontSize: "1.5rem",
+  },
+  logoWrapper: {
+    justifyContent: "center",
+    alignItems: "center",
   },
 };
