@@ -5,7 +5,7 @@ import { MainMenu } from "./components/pages/main-menu/main-menu";
 import { ReversalAnalysis } from "./components/pages/reversal-analysis/reversal-analysis";
 import { ReversaReclassificationAnalysis } from "./components/pages/reversal-reclassification-analysis/reversal-reclassification-analysis";
 import { LoginPage } from "./components/pages/auth/login/login";
-// import ProtectedRoute from "./components/routes/protected-route";
+import ProtectedRoute from "./components/routes/protected-route";
 import { LogoutPage } from "./components/pages/auth/logout/logout";
 import { UnauthorizedPage } from "./components/pages/auth/unauthorized/unauthorized";
 import { LicenceExpiredPage } from "./components/pages/auth/licence-expired/licence-expired";
@@ -22,7 +22,7 @@ function App() {
     <>
       <LocalizationProvider dateAdapter={AdapterDayjs}>
         <Routes>
-          {/* <Route path="*" element={<Pages.NotFoundPage />} /> */}
+          <Route path="*" element={<Pages.NotFoundPage />} />
           <Route path="/" element={<Navigate to={"/login"} />} />
           <Route element={<LoginPage />} path="/login" />
           <Route
@@ -44,15 +44,40 @@ function App() {
           {/* AUTH */}
 
           {/* ANALYSIS */}
-          <Route element={<GeneralAnalysis />} path="/general-analysis" />
-          <Route element={<ReversalAnalysis />} path="/reversal-analysis" />
           <Route
-            element={<ReversaReclassificationAnalysis />}
+            element={
+              <ProtectedRoute>
+                <GeneralAnalysis />
+              </ProtectedRoute>
+            }
+            path="/general-analysis"
+          />
+          <Route
+            element={
+              <ProtectedRoute>
+                <ReversalAnalysis />
+              </ProtectedRoute>
+            }
+            path="/reversal-analysis"
+          />
+          <Route
+            element={
+              <ProtectedRoute>
+                <ReversaReclassificationAnalysis />
+              </ProtectedRoute>
+            }
             path="/reversal-reclassification-analysis"
           />
           {/* ANALYSIS */}
 
-          <Route element={<UserManagementPage />} path="/user-management" />
+          <Route
+            element={
+              <ProtectedRoute>
+                <UserManagementPage />
+              </ProtectedRoute>
+            }
+            path="/user-management"
+          />
         </Routes>
       </LocalizationProvider>
     </>
